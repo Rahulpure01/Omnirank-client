@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniRank AI - Tri-Engine Audit (SEO • AEO • GEO)</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #151d2e;
+      --card-border: #23304a;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent-seo: #10b981;
+      --accent-aeo: #8b5cf6;
+      --accent-geo: #f59e0b;
+      --danger: #ef4444;
+      --success: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa, #c084fc, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 2fr 1.5fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+    @media (max-width: 768px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus {
+      border-color: var(--primary);
+    }
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+      border: none;
+      transition: background 0.2s, transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+    .btn-primary {
+      padding: 12px 24px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.95rem;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary {
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid var(--card-border);
+    }
+    .btn-secondary:hover {
+      background: #334155;
+      color: #f1f5f9;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .status-box {
+      display: none;
+      padding: 16px;
+      border-radius: 8px;
+      background: #1e293b;
+      margin-bottom: 24px;
+      font-size: 0.95rem;
+      align-items: center;
+      gap: 12px;
+    }
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .scores-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 640px) {
+      .scores-row { grid-template-columns: 1fr; }
+    }
+    .score-card {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .score-card.seo { border-top: 4px solid var(--accent-seo); }
+    .score-card.aeo { border-top: 4px solid var(--accent-aeo); }
+    .score-card.geo { border-top: 4px solid var(--accent-geo); }
+    .score-card h3 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .score-number {
+      font-size: 2.8rem;
+      font-weight: 800;
+    }
+    .score-card.seo .score-number { color: var(--accent-seo); }
+    .score-card.aeo .score-number { color: var(--accent-aeo); }
+    .score-card.geo .score-number { color: var(--accent-geo); }
+    .score-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .report-section {
+      margin-top: 20px;
+      border-top: 1px solid var(--card-border);
+      padding-top: 16px;
+    }
+    .report-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .report-section h4 {
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .item-box {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .item-box strong {
+      color: #93c5fd;
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+    .issues-list {
+      list-style: none;
+      padding-left: 0;
+    }
+    .issues-list li {
+      padding: 6px 10px;
+      background: rgba(239, 68, 68, 0.1);
+      border-left: 3px solid var(--danger);
+      margin-bottom: 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    pre {
+      background: #090d16;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 10px;
+      overflow-x: auto;
+      font-size: 0.8rem;
+      color: #a5b4fc;
+      max-height: 250px;
+    }
+    .audits-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin-top: 12px;
+    }
+    .audits-table th, .audits-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .audits-table th {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+    .audits-table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .pill-seo { background: rgba(16, 185, 129, 0.2); color: var(--accent-seo); }
+    .pill-aeo { background: rgba(139, 92, 246, 0.2); color: var(--accent-aeo); }
+    .pill-geo { background: rgba(245, 158, 11, 0.2); color: var(--accent-geo); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">OmniRank AI Engine</div>
+      <h1>Tri-Engine Optimization Audit</h1>
+      <p>Analyze any webpage across SEO (Crawlers), AEO (Voice & Snippets), and GEO (Perplexity/ChatGPT/Gemini)</p>
+    </header>
+
+    <div class="card">
+      <form id="auditForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="url">Website URL to Audit</label>
+            <input type="url" id="url" required placeholder="https://example.com" value="https://example.com" />
+          </div>
+          <div class="form-group">
+            <label for="keyword">Target Focus Keyword</label>
+            <input type="text" id="keyword" required placeholder="e.g. example domain" value="example domain" />
+          </div>
+          <button type="submit" id="submitBtn" class="btn btn-primary">⚡ Run Audit</button>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 12px; align-items: center; font-size: 0.85rem; color: var(--text-muted); flex-wrap: wrap;">
+          <span>Quick Presets:</span>
+          <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="setPreset('https://example.com', 'example domain')">example.com</button>
+          <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="setPreset('https://nodejs.org', 'node js runtime')">nodejs.org</button>
+          <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="setPreset('https://developer.mozilla.org', 'web development resources')">MDN Web Docs</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="statusBox" class="status-box">
+      <div class="spinner"></div>
+      <span id="statusText">Scraping website and analyzing with Gemini AI... Please wait (10-15s)</span>
+    </div>
+
+    <!-- AUDIT RESULT CARD -->
+    <div id="resultCard" class="card" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+        <h2 style="font-size: 1.3rem;">📊 Audit Results</h2>
+        <div style="display: flex; gap: 8px;">
+          <a id="downloadMdBtn" class="btn btn-secondary" href="#" target="_blank">📥 Export Markdown</a>
+        </div>
+      </div>
+      
+      <div class="scores-row">
+        <div class="score-card seo">
+          <h3>SEO Score</h3>
+          <div class="score-number" id="seoScore">--</div>
+          <div class="score-sub">Google / Bing Web Crawlers</div>
+        </div>
+        <div class="score-card aeo">
+          <h3>AEO Score</h3>
+          <div class="score-number" id="aeoScore">--</div>
+          <div class="score-sub">Snippets, Voice & Position 0</div>
+        </div>
+        <div class="score-card geo">
+          <h3>GEO Score</h3>
+          <div class="score-number" id="geoScore">--</div>
+          <div class="score-sub">LLM Citations & Perplexity AI</div>
+        </div>
+      </div>
+
+      <!-- AEO HIGHLIGHT -->
+      <div class="report-section">
+        <div class="report-section-header">
+          <h4 style="color: var(--accent-aeo);">🎙️ AEO Direct Answer Snippet (45-55 words)</h4>
+          <button class="btn btn-secondary" onclick="copyText('directAnswerText')">📋 Copy</button>
+        </div>
+        <div class="item-box">
+          <p id="directAnswerText">--</p>
+        </div>
+      </div>
+
+      <!-- SEO DETAILS -->
+      <div class="report-section">
+        <h4 style="color: var(--accent-seo);">🔍 SEO Assessment & Meta Recommendations</h4>
+        <div class="item-box">
+          <strong>Recommended Title:</strong>
+          <p id="recommendedTitle">--</p>
+        </div>
+        <div class="item-box">
+          <strong>Recommended Description:</strong>
+          <p id="recommendedDescription">--</p>
+        </div>
+        <div class="item-box">
+          <strong>Heading Hierarchy:</strong>
+          <p id="headingAssessment">--</p>
+        </div>
+        <div id="seoIssuesBox" style="display: none;">
+          <strong style="color: #f87171; margin-bottom: 6px; display: block;">SEO Issues Found:</strong>
+          <ul id="seoIssuesList" class="issues-list"></ul>
+        </div>
+      </div>
+
+      <!-- GEO DETAILS -->
+      <div class="report-section">
+        <h4 style="color: var(--accent-geo);">🧠 GEO - Generative Engine Optimization (AI Engines)</h4>
+        <div class="item-box">
+          <strong>Information Gain Assessment:</strong>
+          <p id="infoGainText">--</p>
+        </div>
+        <div class="item-box">
+          <strong>Key Takeaways for LLMs:</strong>
+          <ul id="takeawaysList" style="padding-left: 20px; margin-top: 6px;"></ul>
+        </div>
+      </div>
+
+      <!-- RAW JSON TOGGLE -->
+      <div class="report-section">
+        <details>
+          <summary style="cursor: pointer; color: var(--text-muted); font-size: 0.85rem;">View Full Raw JSON Response</summary>
+          <pre id="rawJsonBox" style="margin-top: 10px;"></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- RECENT AUDITS SECTION -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="font-size: 1.2rem;">🕒 Recent Audits</h2>
+        <button class="btn btn-secondary" onclick="fetchRecentAudits()">🔄 Refresh</button>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="audits-table">
+          <thead>
+            <tr>
+              <th>Target URL</th>
+              <th>Keyword</th>
+              <th>Scores (SEO / AEO / GEO)</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="auditsTableBody">
+            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading recent audits...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("auditForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const statusBox = document.getElementById("statusBox");
+    const statusText = document.getElementById("statusText");
+    const resultCard = document.getElementById("resultCard");
+
+    // Load recent audits on startup
+    fetchRecentAudits();
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const url = document.getElementById("url").value.trim();
+      const keyword = document.getElementById("keyword").value.trim();
+
+      if (!url || !keyword) return;
+
+      submitBtn.disabled = true;
+      statusBox.style.display = "flex";
+      resultCard.style.display = "none";
+      statusText.innerText = "🔍 Scraping website and analyzing with Gemini AI... Please wait";
+
+      try {
+        const response = await fetch("/api/audit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, keyword })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Audit failed to process.");
+        }
+
+        renderResults(data);
+        fetchRecentAudits();
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        statusBox.style.display = "none";
+      }
+    });
+
+    function renderResults(data) {
+      resultCard.style.display = "block";
+      const { id, scores, report } = data;
+
+      document.getElementById("seoScore").innerText = scores.seo ?? 0;
+      document.getElementById("aeoScore").innerText = scores.aeo ?? 0;
+      document.getElementById("geoScore").innerText = scores.geo ?? 0;
+
+      if (id) {
+        document.getElementById("downloadMdBtn").href = `/api/audit/${id}/markdown`;
+      }
+
+      // AEO
+      document.getElementById("directAnswerText").innerText = 
+        report.aeo?.directAnswerSnippet || "No snippet generated.";
+
+      // SEO
+      document.getElementById("recommendedTitle").innerText = 
+        report.seo?.recommendedTitle || "No title recommendation.";
+      document.getElementById("recommendedDescription").innerText = 
+        report.seo?.recommendedDescription || "No description recommendation.";
+      document.getElementById("headingAssessment").innerText = 
+        report.seo?.headingHierarchyAssessment || "No heading issues identified.";
+
+      const seoIssues = report.seo?.issues || [];
+      const seoIssuesBox = document.getElementById("seoIssuesBox");
+      const seoIssuesList = document.getElementById("seoIssuesList");
+      seoIssuesList.innerHTML = "";
+      if (seoIssues.length > 0) {
+        seoIssuesBox.style.display = "block";
+        seoIssues.forEach(issue => {
+          const li = document.createElement("li");
+          li.innerText = issue;
+          seoIssuesList.appendChild(li);
+        });
+      } else {
+        seoIssuesBox.style.display = "none";
+      }
+
+      // GEO
+      document.getElementById("infoGainText").innerText = 
+        report.geo?.informationGainAssessment || "N/A";
+      
+      const takeaways = report.geo?.keyTakeawaysForLLMs || [];
+      const takeawaysList = document.getElementById("takeawaysList");
+      takeawaysList.innerHTML = "";
+      takeaways.forEach(t => {
+        const li = document.createElement("li");
+        li.innerText = t;
+        takeawaysList.appendChild(li);
+      });
+
+      // Raw
+      document.getElementById("rawJsonBox").innerText = JSON.stringify(data, null, 2);
+      resultCard.scrollIntoView({ behavior: "smooth" });
+    }
+
+    async function fetchRecentAudits() {
+      const tbody = document.getElementById("auditsTableBody");
+      try {
+        const res = await fetch("/api/audits");
+        const list = await res.json();
+        if (!list || list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No audits found yet. Run your first audit above!</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = list.map(item => `
+          <tr>
+            <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              <a href="${item.url}" target="_blank" style="color: #60a5fa; text-decoration: none;">${item.url}</a>
+            </td>
+            <td><strong>${item.targetKeyword}</strong></td>
+            <td>
+              <span class="pill pill-seo">SEO: ${item.seoScore}</span>
+              <span class="pill pill-aeo">AEO: ${item.aeoScore}</span>
+              <span class="pill pill-geo">GEO: ${item.geoScore}</span>
+            </td>
+            <td style="color: var(--text-muted); font-size: 0.8rem;">
+              ${new Date(item.createdAt).toLocaleDateString()}
+            </td>
+            <td>
+              <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick='loadPastAudit(${JSON.stringify(item._id)})'>👁️ View</button>
+            </td>
+          </tr>
+        `).join("");
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load recent audits.</td></tr>';
+      }
+    }
+
+    async function loadPastAudit(id) {
+      try {
+        const res = await fetch(`/api/audit/${id}`);
+        const item = await res.json();
+        renderResults({
+          id: item._id,
+          scores: { seo: item.seoScore, aeo: item.aeoScore, geo: item.geoScore },
+          report: item.report
+        });
+      } catch(e) {
+        alert("Failed to load audit: " + e.message);
+      }
+    }
+
+    function copyText(elemId) {
+      const text = document.getElementById(elemId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Copied to clipboard!");
+      });
+    }
+  </script>
+</body>
+</html>
