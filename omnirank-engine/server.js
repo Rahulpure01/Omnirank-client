@@ -53,19 +53,29 @@ app.post("/api/audit", async (req, res) => {
     console.log(`🤖 [2/3] Analyzing with Gemini AI for keyword: "${keyword}"...`);
     const report = await runAudit(content, keyword);
 
-    console.log(`💾 [3/3] Saving report to Local MongoDB...`);
-    const doc = await Audit.create({
-      url: content.url || url,
-      targetKeyword: keyword,
-      seoScore: report.seo?.score ?? 0,
-      aeoScore: report.aeo?.score ?? 0,
-      geoScore: report.geo?.score ?? 0,
-      report,
-    });
+    let docId = Date.now().toString();
+    try {
+      console.log(`💾 [3/3] Saving report to MongoDB...`);
+      const doc = await Audit.create({
+        url: content.url || url,
+        targetKeyword: keyword,
+        seoScore: report.seo?.score ?? 0,
+        aeoScore: report.aeo?.score ?? 0,
+        geoScore: report.geo?.score ?? 0,
+        report,
+      });
+      docId = doc._id;
+    } catch (saveErr) {
+      console.warn("⚠️ Could not persist audit to DB (proceeding with live results):", saveErr.message);
+    }
 
     res.json({
-      id: doc._id,
-      scores: { seo: doc.seoScore, aeo: doc.aeoScore, geo: doc.geoScore },
+      id: docId,
+      scores: { 
+        seo: report.seo?.score ?? 0, 
+        aeo: report.aeo?.score ?? 0, 
+        geo: report.geo?.score ?? 0 
+      },
       report,
     });
   } catch (e) {
@@ -85,11 +95,11 @@ app.get("/api/audits/history", async (req, res) => {
       .limit(limit);
 
     res.json({
-      items,
-      nextCursor: items.length === limit ? items[items.length - 1]._id : null,
+      items: items || [],
+      nextCursor: (items && items.length === limit) ? items[items.length - 1]._id : null,
     });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.json({ items: [], nextCursor: null });
   }
 });
 
@@ -101,9 +111,9 @@ app.get("/api/audits", async (req, res) => {
       .select("url targetKeyword seoScore aeoScore geoScore report createdAt")
       .sort({ createdAt: -1 })
       .limit(limit);
-    res.json(list);
+    res.json(list || []);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.json([]);
   }
 });
 
@@ -263,9 +273,11 @@ app.post("/api/audit/send-email", async (req, res) => {
   }
 });
 
-await connectDB();
-
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 OmniRank Engine listening on http://localhost:${PORT}`);
+});
+
+connectDB().catch((err) => {
+  console.warn("Initial DB connection warning:", err.message);
 });
