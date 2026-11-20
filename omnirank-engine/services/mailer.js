@@ -11,19 +11,20 @@ async function getTransporter() {
 
   // 1. Check if user provided custom SMTP credentials in .env (e.g. Gmail App Password)
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const cleanPass = String(process.env.SMTP_PASS).replace(/\s+/g, "");
     cachedTransporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT) || 465,
       secure: Number(process.env.SMTP_PORT) === 465,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: process.env.SMTP_USER.trim(),
+        pass: cleanPass,
       },
-      connectionTimeout: 4000,
-      greetingTimeout: 3000,
-      socketTimeout: 5000,
+      connectionTimeout: 8000,
+      greetingTimeout: 6000,
+      socketTimeout: 10000,
     });
-    console.log("📧 Using Custom SMTP Transporter:", process.env.SMTP_HOST);
+    console.log("📧 Using Custom SMTP Transporter:", process.env.SMTP_HOST, "User:", process.env.SMTP_USER);
     return cachedTransporter;
   }
 

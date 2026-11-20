@@ -144,6 +144,220 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initi
     sendAuditEmailDirect(emailInput, auditData, subscribeWeekly);
   };
 
+  const handleDownloadPdf = (e) => {
+    if (e) e.preventDefault();
+    if (!auditData) return;
+
+    const rep = auditData.report || {};
+    const targetKw = keyword.trim() || auditData.targetKeyword || 'best guide';
+    const siteUrl = url.trim() || auditData.url || 'website';
+    const scores = auditData.scores || { 
+      seo: auditData.seoScore ?? 58, 
+      aeo: auditData.aeoScore ?? 54, 
+      geo: auditData.geoScore ?? 52 
+    };
+
+    const printWin = window.open('', '_blank', 'width=880,height=960');
+    if (!printWin) {
+      alert('Please allow popups to open and print the PDF report.');
+      return;
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>OmniRank Audit Report - ${targetKw}</title>
+  <style>
+    @page { size: A4; margin: 15mm 12mm; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      margin: 0;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    .header {
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: #9333ea; }
+    .meta { font-size: 12px; color: #64748b; margin-top: 4px; }
+    .badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #f3e8ff;
+      color: #7e22ce;
+      border: 1px solid #d8b4fe;
+    }
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .score-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+      background: #f8fafc;
+    }
+    .score-card.seo { border-color: #bbf7d0; background: #f0fdf4; }
+    .score-card.aeo { border-color: #e9d5ff; background: #faf5ff; }
+    .score-card.geo { border-color: #fef08a; background: #fefce8; }
+    .score-num { font-size: 34px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
+    .score-card.seo .score-num { color: #15803d; }
+    .score-card.aeo .score-num { color: #7e22ce; }
+    .score-card.geo .score-num { color: #a16207; }
+    .score-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: #64748b; }
+    .section {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+      page-break-inside: avoid;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #0f172a;
+      margin-bottom: 10px;
+    }
+    .snippet-box {
+      background: #f8fafc;
+      border-left: 4px solid #9333ea;
+      padding: 12px 14px;
+      border-radius: 0 8px 8px 0;
+      font-style: italic;
+      font-size: 12.5px;
+      color: #334155;
+    }
+    .code-block {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 10.5px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    .issue-item {
+      font-size: 12px;
+      color: #b91c1c;
+      margin-top: 5px;
+    }
+    .footer {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 12px;
+      margin-top: 20px;
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="logo">OmniRank <span>AI</span></div>
+      <div class="meta">
+        <strong>Target:</strong> ${siteUrl} • <strong>Keyword:</strong> ${targetKw}<br/>
+        <strong>Date:</strong> ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+      </div>
+    </div>
+    <div style="text-align: right;">
+      <span class="badge">Tri-Engine Audit Report</span>
+      <div style="margin-top: 8px;" class="no-print">
+        <button onclick="window.print()" style="background:#9333ea;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px;">
+          🖨️ Print / Save as PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="score-grid">
+    <div class="score-card seo">
+      <div class="score-num">${scores.seo ?? 0}</div>
+      <div class="score-label">Traditional SEO Score</div>
+    </div>
+    <div class="score-card aeo">
+      <div class="score-num">${scores.aeo ?? 0}</div>
+      <div class="score-label">AEO (Position 0) Score</div>
+    </div>
+    <div class="score-card geo">
+      <div class="score-num">${scores.geo ?? 0}</div>
+      <div class="score-label">GEO (AI Citations) Score</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">⚡ 1. AEO — Answer Engine Direct Answer Snippet</div>
+    <div class="snippet-box">
+      "${rep.aeo?.directAnswerSnippet || 'No snippet generated.'}"
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🔍 2. SEO — Title & Meta Strategy</div>
+    <div style="font-size:12px;margin-bottom:6px;"><strong>Recommended Title:</strong> ${rep.seo?.recommendedTitle || 'N/A'}</div>
+    <div style="font-size:12px;margin-bottom:6px;"><strong>Recommended Description:</strong> ${rep.seo?.recommendedDescription || 'N/A'}</div>
+    ${(rep.seo?.issues || []).length > 0 ? `
+      <div style="font-size:11px;font-weight:700;color:#b91c1c;margin-top:8px;">Issues Detected:</div>
+      ${(rep.seo.issues).map((i) => `<div class="issue-item">• ${i}</div>`).join('')}
+    ` : ''}
+  </div>
+
+  <div class="section">
+    <div class="section-title">🧠 3. GEO — Generative AI Citations & Info Gain</div>
+    <p style="font-size:12px;color:#334155;margin:0;">${rep.geo?.informationGainAssessment || 'Information gain analyzed.'}</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📜 4. Validated Schema JSON-LD</div>
+    <div class="code-block">${typeof rep.aeo?.suggestedSchema === 'object' ? JSON.stringify(rep.aeo.suggestedSchema, null, 2) : (rep.aeo?.suggestedSchema || '{}')}</div>
+  </div>
+
+  <div class="footer">
+    Generated by OmniRank AI Engine • Confidential & Prepared for Client
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 350);
+    };
+  </script>
+</body>
+</html>
+    `;
+
+    printWin.document.open();
+    printWin.document.write(html);
+    printWin.document.close();
+  };
+
   const handleDownloadMarkdown = (e) => {
     if (e) e.preventDefault();
     if (!auditData) return;
@@ -570,11 +784,20 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={handleDownloadMarkdown}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold transition cursor-pointer shadow-sm active:scale-95"
+                    onClick={handleDownloadPdf}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition cursor-pointer shadow-sm active:scale-95"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Download Markdown</span>
+                    <span>Download PDF Report</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadMarkdown}
+                    title="Download raw Markdown format"
+                    className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-xs font-semibold transition cursor-pointer active:scale-95"
+                  >
+                    <span>.MD</span>
                   </button>
                 </div>
               </div>
