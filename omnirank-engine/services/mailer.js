@@ -10,8 +10,11 @@ async function getTransporter() {
   if (cachedTransporter) return cachedTransporter;
 
   // 1. Check if user provided SMTP credentials (e.g. Gmail App Password)
-  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-    const cleanPass = String(process.env.SMTP_PASS).replace(/\s+/g, "");
+  const user = (process.env.SMTP_USER || process.env.GMAIL_USER || process.env.EMAIL_USER || process.env.MAIL_USER || "").trim();
+  const rawPass = process.env.SMTP_PASS || process.env.GMAIL_PASS || process.env.EMAIL_PASS || process.env.MAIL_PASS || process.env.APP_PASSWORD || process.env.GMAIL_APP_PASSWORD || "";
+  const cleanPass = rawPass.replace(/\s+/g, "");
+
+  if (user && cleanPass) {
     const host = process.env.SMTP_HOST || "smtp.gmail.com";
     const port = Number(process.env.SMTP_PORT) || 465;
 
@@ -20,14 +23,14 @@ async function getTransporter() {
       port,
       secure: port === 465,
       auth: {
-        user: process.env.SMTP_USER.trim(),
+        user,
         pass: cleanPass,
       },
       connectionTimeout: 10000,
       greetingTimeout: 8000,
       socketTimeout: 12000,
     });
-    console.log(`📧 Using Real SMTP Transporter (${host}:${port}) for sender: ${process.env.SMTP_USER}`);
+    console.log(`📧 Using Real SMTP Transporter (${host}:${port}) for sender: ${user}`);
     return cachedTransporter;
   }
 
@@ -358,7 +361,7 @@ export async function sendWeeklyReportEmail(toEmail, domain, reportData) {
   const report = reportData || {};
   const html = generateWeeklyReportHtml(report, toEmail);
 
-  const senderEmail = (process.env.SMTP_USER || "").trim();
+  const senderEmail = (process.env.SMTP_USER || process.env.GMAIL_USER || process.env.EMAIL_USER || "").trim();
   const from = process.env.FROM_EMAIL || (senderEmail ? `"OmniRank AI" <${senderEmail}>` : '"OmniRank AI Growth Engine" <reports@omnirank.ai>');
 
   const mailOptions = {
@@ -614,7 +617,7 @@ export async function sendAuditReportEmail(toEmail, auditData) {
   const transporter = await getTransporter();
   const html = generateAuditReportHtml(auditData, toEmail);
 
-  const senderEmail = (process.env.SMTP_USER || "").trim();
+  const senderEmail = (process.env.SMTP_USER || process.env.GMAIL_USER || process.env.EMAIL_USER || "").trim();
   const from = process.env.FROM_EMAIL || (senderEmail ? `"OmniRank AI" <${senderEmail}>` : '"OmniRank AI Growth Engine" <reports@omnirank.ai>');
 
   const mailOptions = {

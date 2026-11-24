@@ -31,14 +31,21 @@ app.get("/health", (_, res) => res.json({ ok: true, engine: "OmniRank AI" }));
 
 // Mail diagnostics endpoint
 app.get("/api/mail-status", (_, res) => {
-  const user = (process.env.SMTP_USER || "").trim();
-  const rawPass = process.env.SMTP_PASS || "";
+  const user = (process.env.SMTP_USER || process.env.GMAIL_USER || process.env.EMAIL_USER || process.env.MAIL_USER || "").trim();
+  const rawPass = process.env.SMTP_PASS || process.env.GMAIL_PASS || process.env.EMAIL_PASS || process.env.MAIL_PASS || process.env.APP_PASSWORD || process.env.GMAIL_APP_PASSWORD || "";
   const cleanPass = rawPass.replace(/\s+/g, "");
+
+  // Detect which env keys exist (without exposing sensitive values)
+  const detectedKeys = Object.keys(process.env).filter(k => 
+    k.includes("SMTP") || k.includes("MAIL") || k.includes("GMAIL") || k.includes("PASS") || k.includes("EMAIL")
+  );
+
   res.json({
     configured: Boolean(user && cleanPass.length > 0),
     smtpUser: user ? `${user.slice(0, 3)}***@${user.split("@")[1] || "gmail.com"}` : null,
     hasPassword: cleanPass.length > 0,
     passwordLength: cleanPass.length,
+    detectedKeys,
     smtpHost: process.env.SMTP_HOST || "smtp.gmail.com (default)",
     smtpPort: Number(process.env.SMTP_PORT) || 465,
   });
