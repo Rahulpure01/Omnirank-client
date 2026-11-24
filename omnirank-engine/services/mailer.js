@@ -9,22 +9,25 @@ let cachedTransporter = null;
 async function getTransporter() {
   if (cachedTransporter) return cachedTransporter;
 
-  // 1. Check if user provided custom SMTP credentials in .env (e.g. Gmail App Password)
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  // 1. Check if user provided SMTP credentials (e.g. Gmail App Password)
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
     const cleanPass = String(process.env.SMTP_PASS).replace(/\s+/g, "");
+    const host = process.env.SMTP_HOST || "smtp.gmail.com";
+    const port = Number(process.env.SMTP_PORT) || 465;
+
     cachedTransporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: Number(process.env.SMTP_PORT) === 465,
+      host,
+      port,
+      secure: port === 465,
       auth: {
         user: process.env.SMTP_USER.trim(),
         pass: cleanPass,
       },
-      connectionTimeout: 8000,
-      greetingTimeout: 6000,
-      socketTimeout: 10000,
+      connectionTimeout: 10000,
+      greetingTimeout: 8000,
+      socketTimeout: 12000,
     });
-    console.log("📧 Using Custom SMTP Transporter:", process.env.SMTP_HOST, "User:", process.env.SMTP_USER);
+    console.log(`📧 Using Real SMTP Transporter (${host}:${port}) for sender: ${process.env.SMTP_USER}`);
     return cachedTransporter;
   }
 
@@ -355,8 +358,11 @@ export async function sendWeeklyReportEmail(toEmail, domain, reportData) {
   const report = reportData || {};
   const html = generateWeeklyReportHtml(report, toEmail);
 
+  const senderEmail = (process.env.SMTP_USER || "").trim();
+  const from = process.env.FROM_EMAIL || (senderEmail ? `"OmniRank AI" <${senderEmail}>` : '"OmniRank AI Growth Engine" <reports@omnirank.ai>');
+
   const mailOptions = {
-    from: process.env.FROM_EMAIL || '"OmniRank AI Growth Engine" <reports@omnirank.ai>',
+    from,
     to: toEmail,
     subject: `Weekly Growth Report for ${report.domain || domain || "your website"}: +28.4% Clicks & AI Citations`,
     html,
@@ -608,8 +614,11 @@ export async function sendAuditReportEmail(toEmail, auditData) {
   const transporter = await getTransporter();
   const html = generateAuditReportHtml(auditData, toEmail);
 
+  const senderEmail = (process.env.SMTP_USER || "").trim();
+  const from = process.env.FROM_EMAIL || (senderEmail ? `"OmniRank AI" <${senderEmail}>` : '"OmniRank AI Growth Engine" <reports@omnirank.ai>');
+
   const mailOptions = {
-    from: process.env.FROM_EMAIL || '"OmniRank AI Growth Engine" <reports@omnirank.ai>',
+    from,
     to: toEmail,
     subject: `Tri-Engine Audit Report for ${auditData.url || 'your website'}: SEO ${auditData.scores?.seo ?? 0} • AEO ${auditData.scores?.aeo ?? 0} • GEO ${auditData.scores?.geo ?? 0}`,
     html,
