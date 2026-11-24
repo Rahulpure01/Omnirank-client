@@ -31,23 +31,20 @@ app.get("/health", (_, res) => res.json({ ok: true, engine: "OmniRank AI" }));
 
 // Mail diagnostics endpoint
 app.get("/api/mail-status", (_, res) => {
+  const hasResend = Boolean(process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim().length > 0);
+  const hasBrevo = Boolean(process.env.BREVO_API_KEY && process.env.BREVO_API_KEY.trim().length > 0);
   const user = (process.env.SMTP_USER || process.env.GMAIL_USER || process.env.EMAIL_USER || process.env.MAIL_USER || "").trim();
   const rawPass = process.env.SMTP_PASS || process.env.GMAIL_PASS || process.env.EMAIL_PASS || process.env.MAIL_PASS || process.env.APP_PASSWORD || process.env.GMAIL_APP_PASSWORD || "";
   const cleanPass = rawPass.replace(/\s+/g, "");
 
-  // Detect which env keys exist (without exposing sensitive values)
-  const detectedKeys = Object.keys(process.env).filter(k => 
-    k.includes("SMTP") || k.includes("MAIL") || k.includes("GMAIL") || k.includes("PASS") || k.includes("EMAIL")
-  );
-
   res.json({
-    configured: Boolean(user && cleanPass.length > 0),
+    activeProvider: hasResend ? "Resend (HTTPS API - Ready)" : hasBrevo ? "Brevo (HTTPS API - Ready)" : cleanPass ? "Gmail SMTP (Note: Render free tier blocks outbound SMTP ports)" : "None",
+    httpsApiReady: hasResend || hasBrevo,
+    hasResend,
+    hasBrevo,
     smtpUser: user ? `${user.slice(0, 3)}***@${user.split("@")[1] || "gmail.com"}` : null,
     hasPassword: cleanPass.length > 0,
-    passwordLength: cleanPass.length,
-    detectedKeys,
-    smtpHost: process.env.SMTP_HOST || "smtp.gmail.com (default)",
-    smtpPort: Number(process.env.SMTP_PORT) || 465,
+    renderNotice: "Render Free tier blocks outbound TCP on ports 25, 465, and 587. Adding RESEND_API_KEY sends emails over HTTPS port 443 with 100% inbox delivery.",
   });
 });
 

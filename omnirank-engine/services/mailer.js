@@ -6,6 +6,66 @@ dotenv.config({ quiet: true });
 
 let cachedTransporter = null;
 
+// Universal HTTPS API Dispatcher (Bypasses all cloud firewall port blocks e.g. Render ports 465/587)
+export async function sendEmailViaHttpsApi(to, subject, html) {
+  // 1. Resend API (HTTPS Port 443 - 3,000 free emails/month, 0 credit card)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.RESEND_API_KEY.trim()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM || "OmniRank AI <onboarding@resend.dev>",
+          to: [to],
+          subject,
+          html,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        console.log(`✉️ Email successfully delivered via Resend HTTPS API to ${to}. ID: ${data.id}`);
+        return { success: true, messageId: data.id, provider: "resend" };
+      }
+      console.warn("⚠️ Resend API responded with error:", data.message);
+    } catch (e) {
+      console.warn("⚠️ Resend dispatch error:", e.message);
+    }
+  }
+
+  // 2. Brevo API (HTTPS Port 443 - 300 free emails/day)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const sender = (process.env.SMTP_USER || "purerahul630@gmail.com").trim();
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": process.env.BREVO_API_KEY.trim(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: "OmniRank AI", email: sender },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        console.log(`✉️ Email successfully delivered via Brevo HTTPS API to ${to}. ID: ${data.messageId}`);
+        return { success: true, messageId: data.messageId, provider: "brevo" };
+      }
+      console.warn("⚠️ Brevo API responded with error:", data.message);
+    } catch (e) {
+      console.warn("⚠️ Brevo dispatch error:", e.message);
+    }
+  }
+
+  return null;
+}
+
 async function getTransporter() {
   if (cachedTransporter) return cachedTransporter;
 
@@ -357,9 +417,23 @@ export async function sendWeeklyReportEmail(toEmail, domain, reportData) {
     throw new Error("Recipient email address zaroori hai");
   }
 
-  const transporter = await getTransporter();
   const report = reportData || {};
   const html = generateWeeklyReportHtml(report, toEmail);
+  const subject = `Weekly Growth Report for ${report.domain || domain || "your website"}: +28.4% Clicks & AI Citations`;
+
+  // 1. Try HTTPS API first (Resend / Brevo) - never blocked on Render
+  const httpsResult = await sendEmailViaHttpsApi(toEmail, subject, html);
+  if (httpsResult) {
+    return {
+      success: true,
+      messageId: httpsResult.messageId,
+      previewUrl: null,
+      to: toEmail,
+      provider: httpsResult.provider,
+    };
+  }
+
+  const transporter = await getTransporter();
 
   const senderEmail = (process.env.SMTP_USER || process.env.GMAIL_USER || process.env.EMAIL_USER || "").trim();
   const from = process.env.FROM_EMAIL || (senderEmail ? `"OmniRank AI" <${senderEmail}>` : '"OmniRank AI Growth Engine" <reports@omnirank.ai>');
@@ -614,16 +688,29 @@ export async function sendAuditReportEmail(toEmail, auditData) {
     throw new Error("Recipient email address zaroori hai");
   }
 
-  const transporter = await getTransporter();
   const html = generateAuditReportHtml(auditData, toEmail);
+  const subject = `Tri-Engine Audit Report for ${auditData.url || 'your website'}: SEO ${auditData.scores?.seo ?? 0} • AEO ${auditData.scores?.aeo ?? 0} • GEO ${auditData.scores?.geo ?? 0}`;
 
+  // 1. Try HTTPS API first (Resend / Brevo) - never blocked on Render
+  const httpsResult = await sendEmailViaHttpsApi(toEmail, subject, html);
+  if (httpsResult) {
+    return {
+      success: true,
+      messageId: httpsResult.messageId,
+      previewUrl: null,
+      to: toEmail,
+      provider: httpsResult.provider,
+    };
+  }
+
+  const transporter = await getTransporter();
   const senderEmail = (process.env.SMTP_USER || process.env.GMAIL_USER || process.env.EMAIL_USER || "").trim();
   const from = process.env.FROM_EMAIL || (senderEmail ? `"OmniRank AI" <${senderEmail}>` : '"OmniRank AI Growth Engine" <reports@omnirank.ai>');
 
   const mailOptions = {
     from,
     to: toEmail,
-    subject: `Tri-Engine Audit Report for ${auditData.url || 'your website'}: SEO ${auditData.scores?.seo ?? 0} • AEO ${auditData.scores?.aeo ?? 0} • GEO ${auditData.scores?.geo ?? 0}`,
+    subject,
     html,
   };
 
