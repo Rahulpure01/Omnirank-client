@@ -51,6 +51,63 @@ app.get("/api/mail-status", (_, res) => {
   });
 });
 
+// Direct SMTP test endpoint that reveals exact Google response or error
+app.get("/api/test-direct-smtp", async (req, res) => {
+  try {
+    const user = (process.env.SMTP_USER || process.env.GMAIL_USER || process.env.EMAIL_USER || "").trim();
+    const rawPass = process.env.SMTP_PASS || process.env.GMAIL_PASS || process.env.EMAIL_PASS || process.env.APP_PASSWORD || "";
+    const cleanPass = rawPass.replace(/\s+/g, "");
+    const to = req.query.to || user || "purerahul630@gmail.com";
+
+    if (!user || !cleanPass) {
+      return res.status(400).json({ error: "Missing SMTP credentials" });
+    }
+
+    const host = process.env.SMTP_HOST || "smtp.gmail.com";
+    const port = Number(process.env.SMTP_PORT) || 465;
+
+    // Use nodemailer to verify and send
+    const nodemailer = (await import("nodemailer")).default;
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: {
+        user,
+        pass: cleanPass,
+      },
+      connectionTimeout: 10000,
+    });
+
+    console.log(`[Diagnostic] Verifying SMTP connection to ${host}:${port}...`);
+    await transporter.verify();
+
+    console.log(`[Diagnostic] Sending test email to ${to}...`);
+    const info = await transporter.sendMail({
+      from: `"OmniRank Test" <${user}>`,
+      to,
+      subject: "OmniRank Test Verification Email",
+      text: "This is a direct verification email from OmniRank AI.",
+      html: "<h3>OmniRank Email Verification Successful!</h3><p>Your SMTP is working 100%.</p>",
+    });
+
+    res.json({
+      success: true,
+      info,
+      to,
+    });
+  } catch (err) {
+    console.error("[Diagnostic SMTP Error]:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      code: err.code,
+      response: err.response,
+      command: err.command,
+    });
+  }
+});
+
 // 2. Scraper debug endpoint
 app.get("/test-scrape", async (req, res) => {
   try {
