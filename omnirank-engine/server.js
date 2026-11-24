@@ -105,6 +105,33 @@ app.get("/api/test-direct-smtp", async (req, res) => {
   }
 });
 
+// Resend direct test endpoint
+app.get("/api/test-resend", async (req, res) => {
+  try {
+    const apiKey = (process.env.RESEND_API_KEY || "").trim();
+    if (!apiKey) return res.status(400).json({ error: "No RESEND_API_KEY found" });
+
+    const to = req.query.to || "purerahul630@gmail.com";
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || "OmniRank AI <onboarding@resend.dev>",
+        to: [to],
+        subject: "OmniRank AI - Live Test Verification",
+        html: "<h2 style='color:#7c3aed;'>OmniRank AI Live Email Verification Successful!</h2><p>Your platform is now connected via Resend HTTPS API. Emails are delivered directly to inboxes without port blocks.</p>",
+      }),
+    });
+    const data = await response.json();
+    res.status(response.status).json({ httpStatus: response.status, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 2. Scraper debug endpoint
 app.get("/test-scrape", async (req, res) => {
   try {
