@@ -30,6 +30,9 @@ export async function sendEmailViaHttpsApi(to, subject, html) {
         return { success: true, messageId: data.id, provider: "resend" };
       }
       console.warn("⚠️ Resend API responded with error:", data.message);
+      if (!process.env.BREVO_API_KEY) {
+        return { success: false, error: data.message, provider: "resend" };
+      }
     } catch (e) {
       console.warn("⚠️ Resend dispatch error:", e.message);
     }
@@ -424,6 +427,9 @@ export async function sendWeeklyReportEmail(toEmail, domain, reportData) {
   // 1. Try HTTPS API first (Resend / Brevo) - never blocked on Render
   const httpsResult = await sendEmailViaHttpsApi(toEmail, subject, html);
   if (httpsResult) {
+    if (!httpsResult.success) {
+      throw new Error(httpsResult.error);
+    }
     return {
       success: true,
       messageId: httpsResult.messageId,
@@ -694,6 +700,9 @@ export async function sendAuditReportEmail(toEmail, auditData) {
   // 1. Try HTTPS API first (Resend / Brevo) - never blocked on Render
   const httpsResult = await sendEmailViaHttpsApi(toEmail, subject, html);
   if (httpsResult) {
+    if (!httpsResult.success) {
+      throw new Error(httpsResult.error);
+    }
     return {
       success: true,
       messageId: httpsResult.messageId,
