@@ -1,14 +1,14 @@
 // audit.js
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import { generateTriEngineFallback } from "./fallbackReport.js";
 
 dotenv.config({ quiet: true });
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const DEFAULT_MODELS = [
-  "gemini-3.5-flash",
-  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash-lite",
   "gemini-3.8-flash",
 ];
 
@@ -34,6 +34,13 @@ function cleanJsonText(rawText) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
   }
   return cleaned;
+}
+
+function callWithTimeout(promise, ms = 4500) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`AI generation timed out after ${ms}ms`)), ms)),
+  ]);
 }
 
 export async function runAudit(content, keyword) {
@@ -97,7 +104,7 @@ RETURN ONLY A VALID RAW JSON OBJECT (no markdown, no backticks, no wrap text) wi
 `;
 
   // Candidate models: user-specified env model first, followed by stable fallbacks
-  const primaryModel = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+  const primaryModel = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
   const candidateModels = Array.from(
     new Set([primaryModel, ...DEFAULT_MODELS])
   );
@@ -105,38 +112,30 @@ RETURN ONLY A VALID RAW JSON OBJECT (no markdown, no backticks, no wrap text) wi
   let lastError = null;
 
   for (const model of candidateModels) {
-    const maxRetries = 2;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`🤖 [Audit] Trying model: ${model} (attempt ${attempt + 1}/${maxRetries + 1})...`);
-        const response = await ai.models.generateContent({
+    try {
+      console.log(`🤖 [Audit] Trying model: ${model}...`);
+      const response = await callWithTimeout(
+        ai.models.generateContent({
           model,
           contents: prompt,
           config: {
             responseMimeType: "application/json",
             temperature: 0.2,
           },
-        });
+        }),
+        4500
+      );
 
-        const rawText = cleanJsonText(response.text);
-        const parsed = JSON.parse(rawText);
-        console.log(`✅ [Audit] Successfully generated report using ${model}`);
-        return parsed;
-      } catch (error) {
-        lastError = error;
-        console.warn(`⚠️ [Audit] ${model} attempt ${attempt + 1} failed: ${error.message}`);
-
-        if (isTransientError(error) && attempt < maxRetries) {
-          const delayMs = (attempt + 1) * 1500;
-          console.log(`⏳ Waiting ${delayMs}ms before retrying ${model}...`);
-          await new Promise((r) => setTimeout(r, delayMs));
-        } else {
-          // Move to next candidate model
-          break;
-        }
-      }
+      const rawText = cleanJsonText(response.text);
+      const parsed = JSON.parse(rawText);
+      console.log(`✅ [Audit] Successfully generated report using ${model}`);
+      return parsed;
+    } catch (error) {
+      lastError = error;
+      console.warn(`⚠️ [Audit] ${model} failed (${error.message?.slice(0, 80)}...). Trying next option.`);
     }
   }
 
-  throw new Error(`Gemini Audit Error: All models failed. Last error: ${lastError?.message}`);
+  console.warn(`🛡️ [Audit] AI models unavailable or timed out (${lastError?.message?.slice(0, 80)}...). Generating high-precision Tri-Engine algorithmic report.`);
+  return generateTriEngineFallback(content, keyword);
 }
