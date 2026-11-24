@@ -29,6 +29,21 @@ app.use(express.static(path.join(__dirname, "public")));
 // 1. Health check
 app.get("/health", (_, res) => res.json({ ok: true, engine: "OmniRank AI" }));
 
+// Mail diagnostics endpoint
+app.get("/api/mail-status", (_, res) => {
+  const user = (process.env.SMTP_USER || "").trim();
+  const rawPass = process.env.SMTP_PASS || "";
+  const cleanPass = rawPass.replace(/\s+/g, "");
+  res.json({
+    configured: Boolean(user && cleanPass.length > 0),
+    smtpUser: user ? `${user.slice(0, 3)}***@${user.split("@")[1] || "gmail.com"}` : null,
+    hasPassword: cleanPass.length > 0,
+    passwordLength: cleanPass.length,
+    smtpHost: process.env.SMTP_HOST || "smtp.gmail.com (default)",
+    smtpPort: Number(process.env.SMTP_PORT) || 465,
+  });
+});
+
 // 2. Scraper debug endpoint
 app.get("/test-scrape", async (req, res) => {
   try {
