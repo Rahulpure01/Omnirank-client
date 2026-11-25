@@ -669,30 +669,13 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
                 </div>
               )}
 
-              {/* Export Button Row */}
-              <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100">
-                <div className="text-xs text-neutral-500">
-                  Audit ID: <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-[11px] font-mono">{auditData.id || 'live'}</code>
+              {/* Audit Meta Row */}
+              <div className="pt-3 flex items-center justify-between border-t border-neutral-100 text-xs text-neutral-500">
+                <div>
+                  Audit ID: <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-[11px] font-mono text-neutral-700">{auditData.id || 'live'}</code>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleDownloadPdf}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition cursor-pointer shadow-sm active:scale-95"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download PDF Report</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleDownloadMarkdown}
-                    title="Download raw Markdown format"
-                    className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-xs font-semibold transition cursor-pointer active:scale-95"
-                  >
-                    <span>.MD</span>
-                  </button>
+                <div className="text-[11px] text-neutral-400">
+                  Engine: Gemini 3.5 Flash AI
                 </div>
               </div>
 
