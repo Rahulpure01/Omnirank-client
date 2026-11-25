@@ -8,37 +8,7 @@ let cachedTransporter = null;
 
 // Universal HTTPS API Dispatcher (Bypasses all cloud firewall port blocks e.g. Render ports 465/587)
 export async function sendEmailViaHttpsApi(to, subject, html) {
-  // 1. Resend API (HTTPS Port 443 - 3,000 free emails/month, 0 credit card)
-  if (process.env.RESEND_API_KEY) {
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.RESEND_API_KEY.trim()}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM || "OmniRank AI <onboarding@resend.dev>",
-          to: [to],
-          subject,
-          html,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        console.log(`✉️ Email successfully delivered via Resend HTTPS API to ${to}. ID: ${data.id}`);
-        return { success: true, messageId: data.id, provider: "resend" };
-      }
-      console.warn("⚠️ Resend API responded with error:", data.message);
-      if (!process.env.BREVO_API_KEY) {
-        return { success: false, error: data.message, provider: "resend" };
-      }
-    } catch (e) {
-      console.warn("⚠️ Resend dispatch error:", e.message);
-    }
-  }
-
-  // 2. Brevo API (HTTPS Port 443 - 300 free emails/day)
+  // 1. Brevo API (HTTPS Port 443 - 300 free emails/day to ANY recipient worldwide without domain restriction)
   if (process.env.BREVO_API_KEY) {
     try {
       const sender = (process.env.SMTP_USER || "purerahul630@gmail.com").trim();
@@ -60,9 +30,37 @@ export async function sendEmailViaHttpsApi(to, subject, html) {
         console.log(`✉️ Email successfully delivered via Brevo HTTPS API to ${to}. ID: ${data.messageId}`);
         return { success: true, messageId: data.messageId, provider: "brevo" };
       }
-      console.warn("⚠️ Brevo API responded with error:", data.message);
+      console.warn("⚠️ Brevo API error:", data.message || JSON.stringify(data));
     } catch (e) {
       console.warn("⚠️ Brevo dispatch error:", e.message);
+    }
+  }
+
+  // 2. Resend API (HTTPS Port 443 - sends to account owner or verified domain)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.RESEND_API_KEY.trim()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM || "OmniRank AI <onboarding@resend.dev>",
+          to: [to],
+          subject,
+          html,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        console.log(`✉️ Email successfully delivered via Resend HTTPS API to ${to}. ID: ${data.id}`);
+        return { success: true, messageId: data.id, provider: "resend" };
+      }
+      console.warn("⚠️ Resend API responded with error:", data.message);
+      return { success: false, error: data.message, provider: "resend" };
+    } catch (e) {
+      console.warn("⚠️ Resend dispatch error:", e.message);
     }
   }
 

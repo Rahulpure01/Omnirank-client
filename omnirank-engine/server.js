@@ -38,14 +38,43 @@ app.get("/api/mail-status", (_, res) => {
   const cleanPass = rawPass.replace(/\s+/g, "");
 
   res.json({
-    activeProvider: hasResend ? "Resend (HTTPS API - Ready)" : hasBrevo ? "Brevo (HTTPS API - Ready)" : cleanPass ? "Gmail SMTP (Note: Render free tier blocks outbound SMTP ports)" : "None",
+    activeProvider: hasBrevo ? "Brevo (HTTPS API - Sends to ANY email address)" : hasResend ? "Resend (HTTPS API - Sends to account owner or verified domain)" : cleanPass ? "Gmail SMTP (Blocked on Render Free Tier)" : "None",
     httpsApiReady: hasResend || hasBrevo,
-    hasResend,
     hasBrevo,
+    hasResend,
     smtpUser: user ? `${user.slice(0, 3)}***@${user.split("@")[1] || "gmail.com"}` : null,
     hasPassword: cleanPass.length > 0,
-    renderNotice: "Render Free tier blocks outbound TCP on ports 25, 465, and 587. Adding RESEND_API_KEY sends emails over HTTPS port 443 with 100% inbox delivery.",
+    status: hasBrevo ? "READY: Can send to ANY email address (no domain restriction)." : "READY",
   });
+});
+
+// Direct test Brevo endpoint
+app.get("/api/test-brevo", async (req, res) => {
+  try {
+    const apiKey = (process.env.BREVO_API_KEY || "").trim();
+    if (!apiKey) return res.status(400).json({ error: "No BREVO_API_KEY found" });
+
+    const to = req.query.to || "ndwinner6@gmail.com";
+    const sender = (process.env.SMTP_USER || "purerahul630@gmail.com").trim();
+
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: { name: "OmniRank AI", email: sender },
+        to: [{ email: to }],
+        subject: "OmniRank AI - Live Brevo Verification",
+        htmlContent: "<h2 style='color:#7c3aed;'>OmniRank AI Live Email Verification Successful!</h2><p>Delivered via Brevo HTTPS API to any recipient.</p>",
+      }),
+    });
+    const data = await response.json();
+    res.status(response.status).json({ httpStatus: response.status, data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Direct SMTP test endpoint that reveals exact Google response or error
