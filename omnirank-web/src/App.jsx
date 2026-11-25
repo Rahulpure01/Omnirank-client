@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import InteractiveShowcase from './components/InteractiveShowcase';
@@ -6,6 +6,7 @@ import WhatsIncluded from './components/WhatsIncluded';
 import WeeklyReport from './components/WeeklyReport';
 import Footer from './components/Footer';
 import LiveAuditModal from './components/LiveAuditModal';
+import { API_BASE_URL } from './config/api';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -13,6 +14,11 @@ function App() {
     url: '',
     keyword: '',
   });
+
+  // Silent automatic backend ping on visitor arrival
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/health`, { mode: 'cors' }).catch(() => {});
+  }, []);
 
   const handleRunAudit = (url, keyword) => {
     setModalInitial({ url, keyword });
