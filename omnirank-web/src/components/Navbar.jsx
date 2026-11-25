@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Sparkles, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import Logo from './Logo';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -19,17 +20,12 @@ export default function Navbar() {
   return (
     <header className="w-full sticky top-0 z-40 backdrop-blur-md bg-white/80 border-b border-neutral-200/60 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between">
-        {/* Brand */}
+        {/* Brand Logo */}
         <div 
-          className="flex items-center gap-2.5 cursor-pointer select-none" 
+          className="cursor-pointer select-none transition-transform active:scale-95" 
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-500 via-purple-600 to-blue-600 flex items-center justify-center text-white shadow-xs">
-            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </div>
-          <span className="font-bold text-lg sm:text-xl tracking-tight text-neutral-900">
-            OmniRank <span className="text-purple-600 font-extrabold">AI</span>
-          </span>
+          <Logo size="md" />
         </div>
 
         {/* Desktop Nav Links */}

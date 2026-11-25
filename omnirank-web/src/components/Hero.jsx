@@ -57,11 +57,14 @@ export default function Hero({ onRunAudit }) {
     };
   }, [activeSlide]);
 
-  // Continuous Non-Stop Animation (Runs continuously without pause or interruption)
+  // Card rotation: gentle on desktop, user-controlled / relaxed on mobile
   useEffect(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const intervalTime = isMobile ? 6500 : 4200; // Relaxed interval on mobile so user can read peacefully!
+
     const timer = setInterval(() => {
       setActiveSlide((curr) => (curr + 1) % SLIDES.length);
-    }, 3400); // Cycles continuously every 3.4 seconds
+    }, intervalTime);
 
     return () => clearInterval(timer);
   }, []);
@@ -142,6 +145,29 @@ export default function Hero({ onRunAudit }) {
               </button>
             </form>
 
+            {/* Quick Demo Domain Chips (Instant 1-Click Interactive Audits) */}
+            <div className="flex items-center gap-1.5 mb-5 flex-wrap text-xs">
+              <span className="text-neutral-400 text-[11px] font-medium">Quick Demo:</span>
+              {[
+                { domain: 'myntra.com', kw: 'fashion' },
+                { domain: 'vadanyascientific.com', kw: 'medtech' },
+                { domain: 'apple.com', kw: 'smartphones' },
+              ].map((item, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setUrl(item.domain);
+                    setKeyword(item.kw);
+                    onRunAudit(item.domain, item.kw);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-neutral-100 hover:bg-purple-100 hover:text-purple-700 text-neutral-600 text-[11px] font-medium transition cursor-pointer active:scale-95 border border-transparent hover:border-purple-200"
+                >
+                  ⚡ {item.domain}
+                </button>
+              ))}
+            </div>
+
             <p className="text-xs text-neutral-500 mb-6 font-medium">
               Cancel anytime. Instant live audit with Gemini 3.5 Flash AI.
             </p>
@@ -157,10 +183,27 @@ export default function Hero({ onRunAudit }) {
             </div>
           </div>
 
-          {/* Right Column: Physical 3D Stack Shuffling Deck (Runs continuously in an infinite cycle) */}
-          <div className="lg:col-span-6 relative flex justify-center mt-12 sm:mt-14 lg:mt-0">
+          {/* Right Column: Physical 3D Stack Shuffling Deck */}
+          <div className="lg:col-span-6 relative flex flex-col justify-center mt-8 sm:mt-12 lg:mt-0">
+            {/* Mobile Touch Navigation Pills (Calm, non-distracting card switching on phones) */}
+            <div className="flex lg:hidden items-center justify-between gap-1 mb-3 bg-neutral-100 p-1 rounded-xl">
+              {SLIDES.map((slide, idx) => (
+                <button
+                  key={slide.id}
+                  onClick={() => handleSelectSlide(idx)}
+                  className={`flex-1 py-1.5 px-1 rounded-lg text-[10px] font-bold uppercase transition text-center truncate ${
+                    activeSlide === idx
+                      ? 'bg-white text-purple-700 shadow-xs'
+                      : 'text-neutral-500 hover:text-neutral-800'
+                  }`}
+                >
+                  {slide.shortTitle}
+                </button>
+              ))}
+            </div>
+
             {/* Perspective Viewport for the 3D Cards Deck */}
-            <div className="relative w-full h-[496px] sm:h-[468px]">
+            <div className="relative w-full h-[470px] sm:h-[468px]">
               
               {SLIDES.map((slide, idx) => {
                 // Calculate relative 3D position in the stack (0 = Front, 1 = Middle Behind, 2 = Furthest Behind, 3 = Hidden/Cycling)

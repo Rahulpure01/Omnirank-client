@@ -128,3 +128,13 @@
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Mobile Performance Optimization: disable heavy GPU blur thrashing on phones */
+@media (max-width: 768px) {
+  .animate-float,
+  .animate-float-slow,
+  .animate-float-reverse,
+  .animate-pulse-glow {
+    animation: none !important;
+  }
+}

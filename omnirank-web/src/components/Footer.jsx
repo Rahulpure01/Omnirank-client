@@ -1,5 +1,6 @@
 import React from 'react';
-import { Sparkles, Heart } from 'lucide-react';
+import { Heart } from 'lucide-react';
+import Logo from './Logo';
 
 export default function Footer() {
   return (
@@ -32,11 +33,9 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6 pt-6 sm:pt-8 border-t border-neutral-100 text-xs text-neutral-500 text-center sm:text-left">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-md bg-purple-600 flex items-center justify-center text-white shrink-0">
-              <Sparkles className="w-3 h-3" />
-            </div>
-            <span className="font-bold text-neutral-800">OmniRank AI</span>
-            <span>• Tri-Engine Optimization Platform</span>
+            <Logo size="sm" />
+            <span className="hidden sm:inline text-neutral-400">|</span>
+            <span className="hidden sm:inline">Tri-Engine Optimization Platform</span>
           </div>
 
           <p>© 2026 OmniRank AI. All rights reserved.</p>

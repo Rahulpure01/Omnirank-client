@@ -1,24 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  X, Sparkles, Check, Copy, Download, RefreshCw, AlertCircle, Mail, Send, CheckCircle2 
+  X, Sparkles, Check, Copy, Download, RefreshCw, AlertCircle, FileText 
 } from 'lucide-react';
+import Logo from './Logo';
 import { API_BASE_URL } from '../config/api';
 
 export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initialKeyword = '' }) {
   const [url, setUrl] = useState(initialUrl || '');
   const [keyword, setKeyword] = useState(initialKeyword || '');
-  const [emailInput, setEmailInput] = useState('');
-  const [subscribeWeekly, setSubscribeWeekly] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [auditData, setAuditData] = useState(null);
   const [activeTab, setActiveTab] = useState('aeo');
   const [copied, setCopied] = useState(false);
   const [recentAudits, setRecentAudits] = useState([]);
-
-  // Email sending state
-  const [isSendingMail, setIsSendingMail] = useState(false);
-  const [mailStatus, setMailStatus] = useState({ type: '', message: '', previewUrl: null });
 
   useEffect(() => {
     let ignore = false;
@@ -42,7 +37,6 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initi
     setLoading(true);
     setError(null);
     setAuditData(null);
-    setMailStatus({ type: '', message: '', previewUrl: null });
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/audit`, {
@@ -66,82 +60,11 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initi
         .then((r) => (r.ok ? r.json() : []))
         .then((l) => setRecentAudits(l))
         .catch(() => {});
-
-      // If user provided email upfront, auto-dispatch email report
-      if (emailInput && emailInput.includes('@')) {
-        sendAuditEmailDirect(emailInput, data, subscribeWeekly);
-      }
     } catch (err) {
       setError(err.message || `Could not connect to backend server on ${API_BASE_URL}`);
     } finally {
       setLoading(false);
     }
-  };
-
-  const sendAuditEmailDirect = async (targetEmail, currentAudit, shouldSubscribeWeekly) => {
-    if (!targetEmail || !targetEmail.includes('@')) return;
-    setIsSendingMail(true);
-    setMailStatus({ type: '', message: '', previewUrl: null });
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
-
-    try {
-      const payload = {
-        email: targetEmail.trim(),
-        auditData: {
-          ...currentAudit,
-          url: url.trim() || currentAudit.url,
-          targetKeyword: keyword.trim() || currentAudit.targetKeyword || 'best guide',
-        },
-        subscribeWeekly: shouldSubscribeWeekly,
-      };
-
-      const mailRes = await fetch(`${API_BASE_URL}/api/audit/send-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-      const mailJson = await mailRes.json();
-      if (!mailRes.ok) {
-        throw new Error(mailJson.error || 'Failed to dispatch email.');
-      }
-
-      setMailStatus({
-        type: 'success',
-        message: mailJson.message || `Audit report successfully emailed to ${targetEmail}!`,
-        previewUrl: mailJson.previewUrl || null,
-      });
-    } catch (mailErr) {
-      clearTimeout(timeoutId);
-      if (mailErr.name === 'AbortError') {
-        setMailStatus({
-          type: 'success',
-          message: `Audit report queued! Weekly Growth Reports will be sent to ${targetEmail} on Monday.`,
-          previewUrl: null,
-        });
-      } else {
-        setMailStatus({
-          type: 'error',
-          message: mailErr.message || 'Email delivery notice: Report saved. Please check email address.',
-          previewUrl: null,
-        });
-      }
-    } finally {
-      setIsSendingMail(false);
-    }
-  };
-
-  const handleManualSendEmail = (e) => {
-    if (e) e.preventDefault();
-    if (!emailInput || !emailInput.includes('@')) {
-      setMailStatus({ type: 'error', message: 'Kripya valid email address darj karein.' });
-      return;
-    }
-    sendAuditEmailDirect(emailInput, auditData, subscribeWeekly);
   };
 
   const handleDownloadPdf = (e) => {
@@ -159,7 +82,7 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initi
 
     const printWin = window.open('', '_blank', 'width=880,height=960');
     if (!printWin) {
-      alert('Please allow popups to open and print the PDF report.');
+      alert('Please allow popups in your browser to view and print the PDF report.');
       return;
     }
 
@@ -185,15 +108,32 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initi
       margin-bottom: 20px;
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
     }
-    .logo {
-      font-size: 24px;
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-title {
+      font-size: 22px;
       font-weight: 900;
       color: #0f172a;
       letter-spacing: -0.5px;
+      margin: 0;
     }
-    .logo span { color: #9333ea; }
+    .logo-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      background: #f3e8ff;
+      color: #7e22ce;
+      border: 1px solid #d8b4fe;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
     .meta { font-size: 12px; color: #64748b; margin-top: 4px; }
     .badge {
       display: inline-block;
@@ -281,17 +221,41 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initi
 </head>
 <body>
   <div class="header">
-    <div>
-      <div class="logo">OmniRank <span>AI</span></div>
-      <div class="meta">
-        <strong>Target:</strong> ${siteUrl} • <strong>Keyword:</strong> ${targetKw}<br/>
-        <strong>Date:</strong> ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+    <div class="logo-container">
+      <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="p-seo" x1="4" y1="4" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#10b981" />
+            <stop offset="1" stop-color="#06b6d4" />
+          </linearGradient>
+          <linearGradient id="p-aeo" x1="24" y1="4" x2="44" y2="24" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#a855f7" />
+            <stop offset="1" stop-color="#6366f1" />
+          </linearGradient>
+          <linearGradient id="p-geo" x1="12" y1="24" x2="36" y2="44" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#f59e0b" />
+            <stop offset="1" stop-color="#ef4444" />
+          </linearGradient>
+        </defs>
+        <path d="M24 6 C16 6 8 14 8 22 C13 20 18 18 24 21 Z" fill="url(#p-seo)" opacity="0.95" />
+        <path d="M40 22 C40 14 32 6 24 6 C24 12 26 18 31 22 Z" fill="url(#p-aeo)" opacity="0.95" />
+        <path d="M10 24 C14 34 24 42 24 42 C24 42 34 34 38 24 C31 27 17 27 10 24 Z" fill="url(#p-geo)" opacity="0.95" />
+        <circle cx="24" cy="24" r="16" stroke="url(#p-aeo)" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6" />
+        <circle cx="24" cy="24" r="5" fill="#a855f7" />
+        <path d="M24 19 L25.2 22.8 L29 24 L25.2 25.2 L24 29 L22.8 25.2 L19 24 L22.8 22.8 Z" fill="#ffffff" />
+      </svg>
+      <div>
+        <h1 class="logo-title">OmniRank <span class="logo-badge">AI</span></h1>
+        <div class="meta">
+          <strong>Target:</strong> ${siteUrl} • <strong>Keyword:</strong> ${targetKw}<br/>
+          <strong>Date:</strong> ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+        </div>
       </div>
     </div>
     <div style="text-align: right;">
-      <span class="badge">Tri-Engine Audit Report</span>
+      <span class="badge">Tri-Engine Executive Report</span>
       <div style="margin-top: 8px;" class="no-print">
-        <button onclick="window.print()" style="background:#9333ea;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px;">
+        <button onclick="window.print()" style="background:#9333ea;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px;box-shadow:0 2px 4px rgba(147,51,234,0.3);">
           🖨️ Print / Save as PDF
         </button>
       </div>
@@ -430,26 +394,23 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
       <div className="relative w-full max-w-4xl bg-white rounded-3xl border border-neutral-200 shadow-2xl overflow-hidden my-auto text-left max-h-[92vh] flex flex-col animate-fade-in-up">
         
         {/* Modal Top Bar */}
-        <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-bold text-neutral-900 text-base">OmniRank Live Audit Engine</h3>
-              <p className="text-xs text-neutral-500">Tri-Engine Analysis: SEO • AEO • GEO</p>
-            </div>
+        <div className="px-5 sm:px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/70">
+          <div className="flex items-center gap-3">
+            <Logo size="sm" showWordmark={true} />
+            <span className="hidden sm:inline-block w-px h-5 bg-neutral-200"></span>
+            <span className="hidden sm:inline-block text-xs font-semibold text-neutral-500">Live Tri-Engine Audit</span>
           </div>
           <button 
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-neutral-200/60 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 transition cursor-pointer"
+            aria-label="Close modal"
+            className="w-8 h-8 rounded-full bg-neutral-200/70 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 transition cursor-pointer active:scale-95"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
           
           {/* Audit Inputs Bar */}
           <form onSubmit={handleRunAudit} className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200/80 space-y-3">
@@ -462,7 +423,7 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com"
                   required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-neutral-200 text-sm focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600/20"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600/20"
                 />
               </div>
 
@@ -472,8 +433,8 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="example domain"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-neutral-200 text-sm focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600/20"
+                  placeholder="e.g. fashion, shoes"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600/20"
                 />
               </div>
 
@@ -481,36 +442,12 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-neutral-950 hover:bg-neutral-800 disabled:opacity-50 text-white font-bold text-sm flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
+                  className="w-full py-2.5 px-4 rounded-xl bg-neutral-950 hover:bg-neutral-800 disabled:opacity-50 text-white font-bold text-sm flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
                 >
                   {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-purple-400" />}
                   <span>{loading ? 'Auditing...' : 'Run Audit'}</span>
                 </button>
               </div>
-            </div>
-
-            {/* Optional Email & Weekly Report Toggle at Input Stage */}
-            <div className="pt-2 border-t border-neutral-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="flex-1 max-w-sm flex items-center gap-2">
-                <Mail className="w-4 h-4 text-purple-600 shrink-0" />
-                <input
-                  type="email"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="Your email (to receive report & weekly updates)"
-                  className="w-full px-3 py-1.5 rounded-lg bg-white border border-neutral-200 text-xs focus:outline-none focus:border-purple-600"
-                />
-              </div>
-
-              <label className="flex items-center gap-2 text-neutral-700 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={subscribeWeekly}
-                  onChange={(e) => setSubscribeWeekly(e.target.checked)}
-                  className="w-4 h-4 rounded border-neutral-300 text-purple-600 focus:ring-purple-500 accent-purple-600"
-                />
-                <span>Also send <strong>Weekly Growth Reports</strong> every Monday</span>
-              </label>
             </div>
           </form>
 
@@ -532,7 +469,7 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
               <div>
                 <strong className="block font-semibold">Audit Error:</strong>
                 <p className="text-xs text-rose-700 mt-0.5">{error}</p>
-                <p className="text-xs text-neutral-500 mt-1">Make sure the backend is running at <code>{API_BASE_URL}</code></p>
+                <p className="text-xs text-neutral-500 mt-1">Make sure the backend is reachable at <code>{API_BASE_URL}</code></p>
               </div>
             </div>
           )}
@@ -562,83 +499,40 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
                 </div>
               </div>
 
-              {/* Email Delivery & Weekly Reports Banner */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-50/90 via-white to-purple-50/40 border border-purple-200/80 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center">
-                      <Mail className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
-                        Email This Audit Report & Weekly Reports
-                      </h4>
-                      <p className="text-[11px] text-neutral-500">
-                        Receive complete HTML breakdown in your inbox + automated Monday updates.
-                      </p>
-                    </div>
+              {/* Executive Client Deliverable Hero Banner */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-950 to-purple-950 text-white border border-purple-900/50 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-300 text-[10px] font-bold uppercase tracking-wider">
+                    <Sparkles className="w-3 h-3 text-purple-300" />
+                    Client-Ready Deliverable
                   </div>
+                  <h4 className="text-base sm:text-lg font-black tracking-tight text-white">
+                    Executive Tri-Engine Client Report
+                  </h4>
+                  <p className="text-xs text-neutral-300 max-w-xl">
+                    Comprehensive white-label audit with complete SEO, Position 0 (AEO) answers, and LLM Citation (GEO) optimizations ready for presentation.
+                  </p>
                 </div>
 
-                <form onSubmit={handleManualSendEmail} className="space-y-2.5">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="email"
-                      required
-                      value={emailInput}
-                      onChange={(e) => setEmailInput(e.target.value)}
-                      placeholder="Enter email (e.g. founder@domain.com)"
-                      className="flex-1 px-3.5 py-2 rounded-xl bg-white border border-neutral-200 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-purple-600"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isSendingMail}
-                      className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs whitespace-nowrap"
-                    >
-                      {isSendingMail ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                      <span>{isSendingMail ? 'Sending...' : 'Send Audit Report'}</span>
-                    </button>
-                  </div>
-
-                  <label className="flex items-center gap-2 text-xs text-neutral-700 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={subscribeWeekly}
-                      onChange={(e) => setSubscribeWeekly(e.target.checked)}
-                      className="w-4 h-4 rounded border-neutral-300 text-purple-600 focus:ring-purple-500 accent-purple-600"
-                    />
-                    <span>Also subscribe to <strong>Weekly Growth Reports</strong> every Monday at 09:00 AM</span>
-                  </label>
-                </form>
-
-                {mailStatus.message && (
-                  <div
-                    className={`mt-3 p-3 rounded-xl text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
-                      mailStatus.type === 'success'
-                        ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
-                        : 'bg-rose-50 text-rose-900 border border-rose-200'
-                    }`}
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-purple-950/40 transition cursor-pointer active:scale-95"
                   >
-                    <span className="flex items-center gap-1.5 font-medium">
-                      {mailStatus.type === 'success' ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      ) : (
-                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                      )}
-                      {mailStatus.message}
-                    </span>
-                    {mailStatus.previewUrl && (
-                      <a
-                        href={mailStatus.previewUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-bold text-purple-700 hover:text-purple-900 underline text-[11px] whitespace-nowrap ml-5 sm:ml-0"
-                      >
-                        View Sent Email Preview ↗
-                      </a>
-                    )}
-                  </div>
-                )}
+                    <Download className="w-4 h-4" />
+                    <span>Download PDF Report</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadMarkdown}
+                    title="Download raw Markdown"
+                    className="inline-flex items-center justify-center px-3.5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-neutral-200 text-xs font-semibold border border-white/15 transition cursor-pointer active:scale-95"
+                  >
+                    <FileText className="w-4 h-4 text-neutral-300" />
+                    <span className="hidden sm:inline">.MD</span>
+                  </button>
+                </div>
               </div>
 
               {/* Result Details Tabs */}
@@ -776,7 +670,7 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
               )}
 
               {/* Export Button Row */}
-              <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100">
                 <div className="text-xs text-neutral-500">
                   Audit ID: <code className="bg-neutral-100 px-1.5 py-0.5 rounded text-[11px] font-mono">{auditData.id || 'live'}</code>
                 </div>
