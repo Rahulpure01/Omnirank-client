@@ -12,6 +12,7 @@ import WeeklySubscriber from "./models/WeeklySubscriber.js";
 import { scrapeUrl } from "./scraper.js";
 import { runAudit } from "./audit.js";
 import { exportToMarkdown, generateMetaSnippet, generateSchemaScript } from "./services/optimizer.js";
+import { runAutonomousAgentLoop } from "./services/agentOptimizer.js";
 import { getSampleWeeklyReport, generateWeeklyReport } from "./services/weeklyReport.js";
 import { sendWeeklyReportEmail, sendAuditReportEmail } from "./services/mailer.js";
 
@@ -235,6 +236,39 @@ app.post("/api/audit", async (req, res) => {
   } catch (e) {
     console.error("Audit Route Error:", e.message);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// 3.5 Autonomous AI Optimization Agent Endpoint (Level 1 + Level 2 Loop)
+app.post("/api/agent/auto-fix", async (req, res) => {
+  try {
+    const { auditId, url, keyword, auditData } = req.body;
+
+    let targetAudit = auditData;
+    if (!targetAudit && auditId) {
+      targetAudit = auditMemoryCache.get(String(auditId));
+      if (!targetAudit && mongoose.Types.ObjectId.isValid(auditId)) {
+        targetAudit = await Audit.findById(auditId).lean();
+      }
+    }
+
+    if (!targetAudit) {
+      return res.status(400).json({
+        error: "Audit data or valid auditId is required to run the Autonomous Optimization Loop.",
+      });
+    }
+
+    const targetUrl = url || targetAudit.url || "https://example.com";
+    const targetKw = keyword || targetAudit.targetKeyword || "solution";
+
+    console.log(`🤖 [Agent Loop] Initiating autonomous optimization loop for ${targetUrl} [${targetKw}]...`);
+    const result = await runAutonomousAgentLoop(targetAudit, targetKw, targetUrl);
+    console.log(`🎯 [Agent Loop] Completed ${result.totalLoops} loop iterations. Final score: ${result.finalScores.overall}/100.`);
+
+    res.json(result);
+  } catch (err) {
+    console.error("Agent Auto-Fix Route Error:", err.message);
+    res.status(500).json({ error: err.message || "Failed to execute autonomous optimization agent loop." });
   }
 });
 
