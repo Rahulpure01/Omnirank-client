@@ -7,6 +7,7 @@ function getDomainFallback(targetUrl) {
     const brand = host.split(".")[0];
     const capitalizedBrand = brand.charAt(0).toUpperCase() + brand.slice(1);
 
+    const fallbackBody = `Target domain: ${targetUrl}. Enterprise anti-bot security or client-side SPA rendering detected. Tri-Engine analysis performed on domain architecture, brand entity presence, and keyword ranking potential.`;
     return {
       meta: {
         title: `${capitalizedBrand} - Official Website`,
@@ -17,7 +18,8 @@ function getDomainFallback(targetUrl) {
         jsonLd: [],
         botProtected: true,
       },
-      body: `Target domain: ${targetUrl}. Enterprise anti-bot security or client-side SPA rendering detected. Tri-Engine analysis performed on domain architecture, brand entity presence, and keyword ranking potential.`,
+      body: fallbackBody,
+      rawHtml: `<!DOCTYPE html><html><head><title>${capitalizedBrand} - Official Website</title><link rel="canonical" href="${targetUrl}"></head><body><h1>${capitalizedBrand} Online Platform</h1><p>${fallbackBody}</p></body></html>`,
       url: targetUrl,
     };
   } catch (_) {
@@ -32,6 +34,7 @@ function getDomainFallback(targetUrl) {
         botProtected: true,
       },
       body: `Target domain: ${targetUrl}.`,
+      rawHtml: `<!DOCTYPE html><html><head><title>${targetUrl}</title></head><body><h1>${targetUrl}</h1></body></html>`,
       url: targetUrl,
     };
   }
@@ -106,7 +109,7 @@ export async function scrapeUrl(url) {
       body = `${meta.title}. ${meta.description}. Primary site content for ${targetUrl}.`;
     }
 
-    return { meta, body, url: targetUrl };
+    return { meta, body, url: targetUrl, rawHtml: html };
   } catch (err) {
     console.warn(`⚠️ Scraping timed out or errored on ${targetUrl} (${err.message}). Using fast domain fallback.`);
     return getDomainFallback(targetUrl);

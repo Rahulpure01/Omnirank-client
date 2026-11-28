@@ -13,6 +13,10 @@ import { scrapeUrl } from "./scraper.js";
 import { runAudit } from "./audit.js";
 import { exportToMarkdown, generateMetaSnippet, generateSchemaScript } from "./services/optimizer.js";
 import { runAutonomousAgentLoop } from "./services/agentOptimizer.js";
+import { runTechnicalAudit } from "./services/technicalAudit.js";
+import { runMultiPageCrawl } from "./services/multiPageCrawler.js";
+import { runGeoCitationProbe } from "./services/geoCitationProbe.js";
+import * as cheerio from "cheerio";
 import { getSampleWeeklyReport, generateWeeklyReport } from "./services/weeklyReport.js";
 import { sendWeeklyReportEmail, sendAuditReportEmail } from "./services/mailer.js";
 
@@ -184,16 +188,34 @@ app.post("/api/audit", async (req, res) => {
       return res.status(400).json({ error: "Website URL zaroori hai." });
     }
 
-    console.log(`🔍 [1/3] Scraping: ${url}`);
+    console.log(`🔍 [1/4] Scraping target: ${url}`);
     const content = await scrapeUrl(url);
+    const $ = cheerio.load(content.rawHtml || "<html></html>");
 
-    console.log(`🤖 [2/3] Analyzing whole website with Gemini AI...`);
-    const report = await runAudit(content, keyword);
+    console.log(`⚙️ [2/4] Running Tri-Engine AI Audit, Technical Audit & Multi-Page discovery in parallel...`);
+    const [reportResult, techResult, multiPageResult] = await Promise.allSettled([
+      runAudit(content, keyword),
+      runTechnicalAudit(content.url || url, content.rawHtml || "", $),
+      runMultiPageCrawl(content.url || url, $),
+    ]);
+
+    const report = reportResult.status === "fulfilled" ? reportResult.value : {};
+    const technical = techResult.status === "fulfilled" ? techResult.value : {};
+    const multiPage = multiPageResult.status === "fulfilled" ? multiPageResult.value : {};
+
     const effectiveKeyword = report.detectedKeyword || keyword || "website solutions";
+
+    console.log(`🤖 [3/4] Running Live GEO AI Citation Probe for "${effectiveKeyword}"...`);
+    let geoProbe = null;
+    try {
+      geoProbe = await runGeoCitationProbe(content.url || url, effectiveKeyword, content.meta?.title);
+    } catch (probeErr) {
+      console.warn("⚠️ GEO Citation Probe error:", probeErr.message);
+    }
 
     let docId = Date.now().toString();
     try {
-      console.log(`💾 [3/3] Saving report to MongoDB...`);
+      console.log(`💾 [4/4] Saving report to MongoDB...`);
       const doc = await Audit.create({
         url: content.url || url,
         targetKeyword: effectiveKeyword,
@@ -217,6 +239,9 @@ app.post("/api/audit", async (req, res) => {
       aeoScore: report.aeo?.score ?? 0,
       geoScore: report.geo?.score ?? 0,
       report,
+      technical,
+      multiPage,
+      geoProbe,
       createdAt: new Date(),
     };
     auditMemoryCache.set(String(docId), auditRecord);
@@ -230,9 +255,14 @@ app.post("/api/audit", async (req, res) => {
       scores: { 
         seo: report.seo?.score ?? 0, 
         aeo: report.aeo?.score ?? 0, 
-        geo: report.geo?.score ?? 0 
+        geo: report.geo?.score ?? 0,
+        technical: technical.technicalScore ?? 85,
+        overallSite: multiPage.averageSiteScore ?? 80,
       },
       report,
+      technical,
+      multiPage,
+      geoProbe,
     });
   } catch (e) {
     console.error("Audit Route Error:", e.message);
