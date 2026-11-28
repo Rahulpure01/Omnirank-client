@@ -6,9 +6,8 @@ import {
 import Logo from './Logo';
 import { API_BASE_URL } from '../config/api';
 
-export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initialKeyword = '' }) {
+export default function LiveAuditModal({ isOpen, onClose, initialUrl = '' }) {
   const [url, setUrl] = useState(initialUrl || '');
-  const [keyword, setKeyword] = useState(initialKeyword || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [auditData, setAuditData] = useState(null);
@@ -54,7 +53,6 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initi
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: url.trim(),
-          keyword: keyword.trim() || 'best guide'
         })
       });
 
@@ -91,7 +89,7 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initi
         body: JSON.stringify({
           auditId: auditData.id,
           url: url.trim() || auditData.url,
-          keyword: keyword.trim() || auditData.targetKeyword,
+          keyword: auditData.report?.detectedKeyword || auditData.targetKeyword,
           auditData,
         }),
       });
@@ -114,7 +112,7 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initi
     if (!auditData) return;
 
     const rep = auditData.report || {};
-    const targetKw = keyword.trim() || auditData.targetKeyword || 'best guide';
+    const targetKw = auditData.report?.detectedKeyword || auditData.targetKeyword || 'website solutions';
     const siteUrl = url.trim() || auditData.url || 'website';
     const scores = auditData.scores || { 
       seo: auditData.seoScore ?? 58, 
@@ -369,7 +367,7 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '', initi
     if (!auditData) return;
 
     const rep = auditData.report || {};
-    const targetKw = keyword.trim() || auditData.targetKeyword || 'guide';
+    const targetKw = auditData.report?.detectedKeyword || auditData.targetKeyword || 'website solutions';
     const siteUrl = url.trim() || auditData.url || 'website';
     const scores = auditData.scores || { 
       seo: auditData.seoScore ?? 58, 
@@ -475,10 +473,10 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
         {/* Modal Body */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
           
-          {/* Audit Inputs Bar */}
+          {/* Audit Inputs Bar (URL Only - Scrapes & Audits Whole Site) */}
           <form onSubmit={handleRunAudit} className="p-4 bg-neutral-50 rounded-2xl border border-neutral-200/80 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-              <div className="sm:col-span-6">
+            <div className="flex flex-col sm:flex-row items-end gap-3">
+              <div className="flex-1 w-full">
                 <label className="block text-xs font-semibold text-neutral-700 mb-1">Target Website URL</label>
                 <input 
                   type="text"
@@ -490,25 +488,14 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
                 />
               </div>
 
-              <div className="sm:col-span-3">
-                <label className="block text-xs font-semibold text-neutral-700 mb-1">Focus Keyword</label>
-                <input 
-                  type="text"
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="e.g. fashion, shoes"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-neutral-200 text-sm text-neutral-900 focus:outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600/20"
-                />
-              </div>
-
-              <div className="sm:col-span-3 flex items-end">
+              <div className="w-full sm:w-auto">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-neutral-950 hover:bg-neutral-800 disabled:opacity-50 text-white font-bold text-sm flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95"
+                  className="w-full sm:w-auto py-2.5 px-6 rounded-xl bg-neutral-950 hover:bg-neutral-800 disabled:opacity-50 text-white font-bold text-sm flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
                 >
                   {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-purple-400" />}
-                  <span>{loading ? 'Auditing...' : 'Run Audit'}</span>
+                  <span>{loading ? 'Auditing Whole Site...' : 'Audit Website'}</span>
                 </button>
               </div>
             </div>
@@ -541,6 +528,24 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
           {auditData && !loading && (
             <div className="space-y-6">
               
+              {/* Auto-Detected Whole Site Focus Topic Pill */}
+              <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50/40 to-neutral-50 border border-purple-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-neutral-500 uppercase text-[10px] tracking-wider">Auto-Detected Focus:</span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-purple-600 text-white font-bold text-xs shadow-2xs">
+                    🎯 {auditData.report?.detectedKeyword || auditData.targetKeyword || 'Comprehensive Digital Platform'}
+                  </span>
+                  {auditData.report?.niche && (
+                    <span className="text-neutral-500 text-[11px] font-medium hidden sm:inline">
+                      • Niche: {auditData.report.niche}
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-purple-700/80 font-semibold">
+                  Entire Website Scraped &amp; Analyzed
+                </div>
+              </div>
+
               {/* Score Badges Row (Optimized for Mobile & Desktop) */}
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <div className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-emerald-50/70 border border-emerald-200/70 text-center">
@@ -1079,7 +1084,6 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
                     key={item._id}
                     onClick={() => {
                       setUrl(item.url);
-                      setKeyword(item.targetKeyword);
                       setAuditData({ id: item._id, scores: { seo: item.seoScore, aeo: item.aeoScore, geo: item.geoScore }, report: item.report });
                     }}
                     className="p-2.5 rounded-xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-100 flex items-center justify-between text-xs cursor-pointer transition"

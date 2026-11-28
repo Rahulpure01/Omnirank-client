@@ -179,23 +179,24 @@ app.get("/test-scrape", async (req, res) => {
 // 3. Main Tri-Engine Audit Pipeline (Scrape -> Gemini -> MongoDB Save)
 app.post("/api/audit", async (req, res) => {
   try {
-    const { url, keyword } = req.body;
-    if (!url || !keyword) {
-      return res.status(400).json({ error: "url aur keyword dono zaroori hain" });
+    const { url, keyword = "" } = req.body;
+    if (!url || !url.trim()) {
+      return res.status(400).json({ error: "Website URL zaroori hai." });
     }
 
     console.log(`🔍 [1/3] Scraping: ${url}`);
     const content = await scrapeUrl(url);
 
-    console.log(`🤖 [2/3] Analyzing with Gemini AI for keyword: "${keyword}"...`);
+    console.log(`🤖 [2/3] Analyzing whole website with Gemini AI...`);
     const report = await runAudit(content, keyword);
+    const effectiveKeyword = report.detectedKeyword || keyword || "website solutions";
 
     let docId = Date.now().toString();
     try {
       console.log(`💾 [3/3] Saving report to MongoDB...`);
       const doc = await Audit.create({
         url: content.url || url,
-        targetKeyword: keyword,
+        targetKeyword: effectiveKeyword,
         seoScore: report.seo?.score ?? 0,
         aeoScore: report.aeo?.score ?? 0,
         geoScore: report.geo?.score ?? 0,
@@ -211,7 +212,7 @@ app.post("/api/audit", async (req, res) => {
       _id: docId,
       id: docId,
       url: content.url || url,
-      targetKeyword: keyword,
+      targetKeyword: effectiveKeyword,
       seoScore: report.seo?.score ?? 0,
       aeoScore: report.aeo?.score ?? 0,
       geoScore: report.geo?.score ?? 0,

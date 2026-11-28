@@ -32,7 +32,6 @@ const SLIDES = [
 
 export default function Hero({ onRunAudit }) {
   const [url, setUrl] = useState('');
-  const [keyword, setKeyword] = useState('');
   const [activeSlide, setActiveSlide] = useState(0);
 
   // Typewriter effect state
@@ -76,7 +75,7 @@ export default function Hero({ onRunAudit }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!url.trim()) return;
-    onRunAudit(url.trim(), keyword.trim() || 'best guide');
+    onRunAudit(url.trim());
   };
 
   return (
@@ -104,66 +103,47 @@ export default function Hero({ onRunAudit }) {
               Let's grow your traffic!
             </p>
 
-            {/* Input Container (Mobile & Desktop Responsive) */}
+            {/* Clean Single URL Input Bar (Zero-Friction: Scrapes & Fixes Whole Site) */}
             <form 
               onSubmit={handleSubmit}
               className="w-full max-w-xl bg-white p-2 rounded-2xl sm:rounded-full border border-neutral-200/90 shadow-[0_12px_36px_rgba(0,0,0,0.07)] focus-within:border-neutral-950 focus-within:shadow-[0_16px_48px_rgba(0,0,0,0.12)] transition-all duration-300 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-3"
             >
-              <div className="flex-1 w-full flex items-center px-3 gap-2">
-                <Globe className="w-4 h-4 text-neutral-400 shrink-0" />
+              <div className="flex-1 w-full flex items-center px-4 gap-2.5">
+                <Globe className="w-5 h-5 text-purple-600 shrink-0" />
                 <input
                   type="text"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder="yourdomain.com"
+                  placeholder="Enter website URL (e.g. myntra.com, apple.com)"
                   className="w-full bg-transparent text-sm sm:text-base text-neutral-900 placeholder-neutral-400 focus:outline-none py-2"
                   required
-                />
-              </div>
-
-              <div className="hidden sm:block w-px h-6 bg-neutral-200"></div>
-              <div className="block sm:hidden w-full h-px bg-neutral-100"></div>
-
-              <div className="flex-1 w-full flex items-center px-3 gap-2">
-                <FileText className="w-4 h-4 text-neutral-400 shrink-0" />
-                <input
-                  type="text"
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="Target keyword"
-                  className="w-full bg-transparent text-sm sm:text-base text-neutral-900 placeholder-neutral-400 focus:outline-none py-2"
                 />
               </div>
 
               <button
                 type="submit"
                 aria-label="Submit"
-                className="w-full sm:w-10 h-10 sm:h-10 rounded-xl sm:rounded-full bg-neutral-950 hover:bg-neutral-800 text-white flex items-center justify-center gap-2 font-bold text-xs sm:text-sm transition-transform duration-200 hover:scale-105 active:scale-95 shrink-0 cursor-pointer shadow-sm py-2 sm:py-0"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl sm:rounded-full bg-neutral-950 hover:bg-neutral-800 text-white flex items-center justify-center gap-2 font-bold text-xs sm:text-sm transition-transform duration-200 hover:scale-105 active:scale-95 shrink-0 cursor-pointer shadow-sm"
               >
-                <span className="sm:hidden font-semibold">Analyze Website</span>
+                <span>Audit & Fix Website</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
 
-            {/* Quick Demo Domain Chips (Instant 1-Click Interactive Audits) */}
+            {/* Quick Demo Domain Chips */}
             <div className="flex items-center gap-1.5 mb-5 flex-wrap text-xs">
               <span className="text-neutral-400 text-[11px] font-medium">Quick Demo:</span>
-              {[
-                { domain: 'myntra.com', kw: 'fashion' },
-                { domain: 'vadanyascientific.com', kw: 'medtech' },
-                { domain: 'apple.com', kw: 'smartphones' },
-              ].map((item, idx) => (
+              {['myntra.com', 'vadanyascientific.com', 'apple.com'].map((domain, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => {
-                    setUrl(item.domain);
-                    setKeyword(item.kw);
-                    onRunAudit(item.domain, item.kw);
+                    setUrl(domain);
+                    onRunAudit(domain);
                   }}
                   className="px-2.5 py-1 rounded-full bg-neutral-100 hover:bg-purple-100 hover:text-purple-700 text-neutral-600 text-[11px] font-medium transition cursor-pointer active:scale-95 border border-transparent hover:border-purple-200"
                 >
-                  ⚡ {item.domain}
+                  ⚡ {domain}
                 </button>
               ))}
             </div>

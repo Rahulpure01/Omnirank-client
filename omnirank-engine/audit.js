@@ -43,8 +43,9 @@ function callWithTimeout(promise, ms = 4500) {
   ]);
 }
 
-export async function runAudit(content, keyword) {
-  const { meta, body } = content;
+export async function runAudit(content, keyword = "") {
+  const { meta, body, url } = content;
+  const kw = (keyword || "").trim();
 
   const prompt = `
 You are OmniRank AI, an elite audit engine specializing in Tri-Engine Optimization:
@@ -52,24 +53,31 @@ You are OmniRank AI, an elite audit engine specializing in Tri-Engine Optimizati
 2. AEO (Answer Engine Optimization for Featured Snippets, Voice Search, Position 0)
 3. GEO (Generative Engine Optimization for LLMs like Perplexity, ChatGPT Search, Gemini citations)
 
-Analyze this scraped webpage for the target keyword: "${keyword}".
-
-PAGE METADATA:
-- Title: ${meta.title}
-- Description: ${meta.description}
+ANALYZE THIS SCRAPED WEBPAGE:
+- Target URL: ${url || content.url || ""}
+- Scraped Title: ${meta.title}
+- Scraped Description: ${meta.description}
 - Canonical: ${meta.canonical}
 - H1 Count: ${meta.h1Count}
 - Headings: ${JSON.stringify(meta.headings)}
 - Existing Schemas: ${JSON.stringify(meta.jsonLd)}
-
-PAGE BODY TEXT (Excerpt):
+- Scraped Body Text:
 ${body}
 
+${kw ? `USER SPECIFIED KEYWORD: "${kw}"` : `AUTOMATIC TOPIC DISCOVERY:
+Analyze the entire scraped website content and automatically determine:
+1. "detectedKeyword": The exact primary search keyword this website should rank for.
+2. "niche": The high-level industry or niche of this website (e.g. "Fashion E-Commerce", "SaaS Automation", "Healthcare").`}
+
 CRITICAL RULES:
+- If no keyword was supplied, automatically discover and set "detectedKeyword" and "niche".
 - directAnswerSnippet must be 45-55 words. Never invent statistics; use [add source] if a stat is needed.
+- Identify all actionable issues across SEO, AEO, and GEO.
 
 RETURN ONLY A VALID RAW JSON OBJECT (no markdown, no backticks, no wrap text) with this exact schema:
 {
+  "detectedKeyword": "",
+  "niche": "",
   "seo": {
     "score": 0,
     "titleAssessment": "",

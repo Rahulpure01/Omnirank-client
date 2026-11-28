@@ -1,8 +1,16 @@
 // Test heuristic generator
-export function generateTriEngineFallback(content, keyword) {
+export function generateTriEngineFallback(content, keyword = "") {
   const { meta, body, url } = content;
   const brand = (meta.title || url || "Brand").split(/[-–|:]/)[0].trim() || "Brand";
-  const kw = keyword.toLowerCase();
+
+  // Auto-detect keyword from scraped title/domain if user didn't enter one
+  let detectedKeyword = (keyword || "").trim();
+  if (!detectedKeyword) {
+    const rawWords = (meta.title || "").split(/[-–|:]/);
+    detectedKeyword = (rawWords[1] || rawWords[0] || "online platform").trim();
+    if (detectedKeyword.length < 3) detectedKeyword = `${brand} platform`;
+  }
+  const kw = detectedKeyword.toLowerCase();
 
   // 1. Calculate SEO metrics
   let seoScore = 70;
@@ -58,6 +66,8 @@ export function generateTriEngineFallback(content, keyword) {
   geoScore = Math.max(45, Math.min(85, geoScore));
 
   return {
+    detectedKeyword,
+    niche: `${brand} Solutions`,
     seo: {
       score: seoScore,
       titleAssessment: meta.title ? `Title is "${meta.title}" (${meta.title.length} chars). ${meta.title.toLowerCase().includes(kw) ? "Contains keyword." : "Needs keyword optimization."}` : "Missing page title.",

@@ -323,8 +323,11 @@ RETURN ONLY A RAW JSON OBJECT (no markdown, no backticks) with this exact schema
  * Level 2: The Autonomous Agentic Loop
  * Flow: Audit -> Fix -> Re-evaluate -> If score < 85, refine -> Repeat up to 3 times.
  */
-export async function runAutonomousAgentLoop(auditData, keyword, url) {
+export async function runAutonomousAgentLoop(auditData, keyword = "", url = "") {
   const targetScore = 85;
+  const targetKw = (keyword || auditData.targetKeyword || auditData.report?.detectedKeyword || "").trim() || "website solutions";
+  const targetUrl = url || auditData.url || "https://example.com";
+
   const initialScores = auditData.scores || {
     seo: auditData.seoScore ?? 52,
     aeo: auditData.aeoScore ?? 48,
@@ -345,14 +348,14 @@ export async function runAutonomousAgentLoop(auditData, keyword, url) {
     // 1. Generate/Refine fix
     currentAssets = await runAiOptimizationPass(
       auditData,
-      keyword,
-      url,
+      targetKw,
+      targetUrl,
       loop,
       previousFeedback
     );
 
     // 2. Re-audit and score generated assets
-    evaluatedScores = evaluateOptimizedAssets(currentAssets, keyword, initialScores);
+    evaluatedScores = evaluateOptimizedAssets(currentAssets, targetKw, initialScores);
 
     // Boost score sensibly on successive iterations
     if (loop > 1) {
