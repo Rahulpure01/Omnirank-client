@@ -21,6 +21,7 @@ export default function LiveAuditModal({ isOpen, onClose, initialUrl = '' }) {
   const [fixResult, setFixResult] = useState(null);
   const [fixError, setFixError] = useState(null);
   const [fixSubTab, setFixSubTab] = useState('code'); // 'code', 'content', 'loop'
+  const [downloadedHtml, setDownloadedHtml] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -421,17 +422,58 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
     URL.revokeObjectURL(blobUrl);
   };
 
-  const handleDownloadFixedHtml = () => {
-    if (!fixResult?.readyToPasteHtml) return;
-    const blob = new Blob([fixResult.readyToPasteHtml], { type: 'text/html;charset=utf-8;' });
+  const handleDownloadFixedHtml = (e) => {
+    if (e) e.preventDefault();
+    if (!fixResult) return;
+
+    const htmlContent = fixResult.readyToPasteHtml || `<!-- OmniRank AI - Autonomous Production Assets -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${fixResult.optimizedAssets?.title || 'Optimized Page Title'}</title>
+  <meta name="description" content="${fixResult.optimizedAssets?.metaDescription || ''}">
+  <script type="application/ld+json">
+${JSON.stringify(fixResult.optimizedAssets?.schemaJsonLd || {}, null, 2)}
+  </script>
+</head>
+<body>
+  <h1>${fixResult.optimizedAssets?.h1 || ''}</h1>
+  ${(fixResult.optimizedAssets?.h2Headings || []).map((h) => `<h2>${h}</h2>`).join('\n  ')}
+  <section class="omnirank-direct-answer" style="border-left:4px solid #7c3aed; padding:16px; margin:20px 0; background:#fbfaff; border-radius:8px;">
+    <p style="font-size:1.05rem; line-height:1.6; color:#1e1b4b; font-weight:500;">
+      ${fixResult.optimizedAssets?.directAnswerSnippet || ''}
+    </p>
+  </section>
+</body>
+</html>`;
+
+    const topicSlug = (
+      auditData?.report?.detectedKeyword ||
+      auditData?.targetKeyword ||
+      url ||
+      'optimized'
+    )
+      .replace(/https?:\/\//i, '')
+      .replace(/[^a-z0-9]/gi, '_')
+      .slice(0, 30);
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
     const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = blobUrl;
-    link.download = `omnirank-optimized-${(keyword || 'page').replace(/[^a-z0-9]/gi, '_')}.html`;
+    link.download = `omnirank-optimized-${topicSlug}.html`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
+
+    setDownloadedHtml(true);
+    setTimeout(() => {
+      setDownloadedHtml(false);
+      if (document.body.contains(link)) {
+        document.body.removeChild(link);
+      }
+      URL.revokeObjectURL(blobUrl);
+    }, 2000);
   };
 
   const handleCopy = (text) => {
@@ -809,12 +851,22 @@ ${(rep.seo?.issues || []).map((iss) => `- ${iss}`).join('\n') || '- None detecte
                             <span>{copiedCode ? 'Copied All Code' : 'Copy All Code'}</span>
                           </button>
                           <button
+                            type="button"
                             onClick={handleDownloadFixedHtml}
-                            title="Download .html file"
-                            className="px-2.5 py-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold transition cursor-pointer active:scale-95 flex items-center gap-1"
+                            title="Download complete .html file"
+                            className="px-3 py-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold transition cursor-pointer active:scale-95 flex items-center gap-1.5 border border-neutral-200/80 shadow-2xs"
                           >
-                            <FileCode className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">.HTML</span>
+                            {downloadedHtml ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                <span className="text-emerald-700">Downloaded!</span>
+                              </>
+                            ) : (
+                              <>
+                                <FileCode className="w-3.5 h-3.5 text-purple-600" />
+                                <span>.HTML</span>
+                              </>
+                            )}
                           </button>
                         </div>
                       </div>
